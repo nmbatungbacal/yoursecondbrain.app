@@ -537,7 +537,7 @@ function renderCalBody(){
       h+='<div style="font-size:12px;font-weight:'+(isToday?'900':'600')+';color:'+(isToday?'#fff':'var(--text-muted)')+';background:'+(isToday?'var(--navy)':'none')+';width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:2px">'+d+'</div>';
       evs.slice(0,3).forEach(function(ev){
         var cal=calCalendars.find(function(c){return c.id===ev.calendar_id;})||{color:'#4285f4'};
-        h+='<div style="background:'+esc(cal.color)+'22;border-left:2px solid '+esc(cal.color)+';padding:1px 4px;border-radius:2px;font-size:10px;color:var(--text);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" data-cal-ev="'+ev.id+'">'+esc(ev.title||'')+'</div>';
+        h+='<div style="background:'+esc(cal.color)+'22;border-left:2px solid '+esc(cal.color)+';padding:1px 4px;border-radius:2px;font-size:10px;color:var(--text);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;white-space:nowrap" data-cal-ev="'+ev.id+'">'+esc(ev.title||'')+'</div>';
       });
       tasksDue.slice(0,2).forEach(function(t){
         h+='<div style="background:#fff3e0;border-left:2px solid #f59e0b;padding:1px 4px;border-radius:2px;font-size:10px;color:var(--text);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✅ '+esc(t.title||t.text||'')+'</div>';
@@ -547,7 +547,7 @@ function renderCalBody(){
     }
     h+='</div>';
     body.innerHTML=h;
-    body.querySelectorAll('[data-cal-day]').forEach(function(el){el.addEventListener('click',function(ev){if(!ev.target.dataset.calEv)openCalEventModal(null,el.dataset.calDay);});});
+    body.querySelectorAll('[data-cal-day]').forEach(function(el){el.addEventListener('click',function(ev){if(!ev.target.closest('[data-cal-ev]'))openCalEventModal(null,el.dataset.calDay);});});
     body.querySelectorAll('[data-cal-ev]').forEach(function(el){el.addEventListener('click',function(ev){ev.stopPropagation();openCalEventModal(el.dataset.calEv,null);});});
   } else {
     // Weekly view
@@ -559,11 +559,11 @@ function renderCalBody(){
     for(var hr=6;hr<=22;hr++){
       var hrStr=(hr%12||12)+(hr<12?'am':'pm');
       h+='<div style="background:var(--white);padding:3px 4px;font-size:9px;color:var(--text-muted);text-align:center;border-top:1px solid var(--border)">'+hrStr+'</div>';
-      for(var i2=0;i2<7;i2++){var dd2=new Date(ws);dd2.setDate(ws.getDate()+i2);var ds2=calDateStr(dd2);var hrEvs=calEventsOnDate(ds2).filter(function(e){return e.start_time&&+e.start_time.split(':')[0]===hr;});h+='<div style="background:var(--white);min-height:30px;border-top:1px solid var(--border);border-left:1px solid var(--border);padding:2px;cursor:pointer" data-cal-day="'+ds2+'">';hrEvs.forEach(function(ev){var cal=calCalendars.find(function(c){return c.id===ev.calendar_id;})||{color:'#4285f4'};h+='<div style="background:'+esc(cal.color)+';color:#fff;padding:1px 4px;border-radius:3px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:1px" data-cal-ev="'+ev.id+'">'+esc(ev.title||'')+'</div>';});h+='</div>';}
+      for(var i2=0;i2<7;i2++){var dd2=new Date(ws);dd2.setDate(ws.getDate()+i2);var ds2=calDateStr(dd2);var hrEvs=calEventsOnDate(ds2).filter(function(e){return e.start_time&&+e.start_time.split(':')[0]===hr;});h+='<div style="background:var(--white);min-height:30px;border-top:1px solid var(--border);border-left:1px solid var(--border);padding:2px;cursor:pointer" data-cal-day="'+ds2+'">';hrEvs.forEach(function(ev){var cal=calCalendars.find(function(c){return c.id===ev.calendar_id;})||{color:'#4285f4'};h+='<div style="background:'+esc(cal.color)+';color:#fff;padding:1px 4px;border-radius:3px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:1px;cursor:pointer" data-cal-ev="'+ev.id+'">'+esc(ev.title||'')+'</div>';});if(hr===8){var dayTasks=tasks.filter(function(t){return t.due_date===ds2&&!t.done;});dayTasks.forEach(function(t){h+='<div style="background:#fff3e0;border-left:2px solid #f59e0b;padding:1px 4px;border-radius:3px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:1px">✅ '+esc(t.title||t.text||'')+'</div>';});}h+='</div>';}
     }
     h+='</div>';
     body.innerHTML=h;
-    body.querySelectorAll('[data-cal-day]').forEach(function(el){el.addEventListener('click',function(ev){if(!ev.target.dataset.calEv)openCalEventModal(null,el.dataset.calDay);});});
+    body.querySelectorAll('[data-cal-day]').forEach(function(el){el.addEventListener('click',function(ev){if(!ev.target.closest('[data-cal-ev]'))openCalEventModal(null,el.dataset.calDay);});});
     body.querySelectorAll('[data-cal-ev]').forEach(function(el){el.addEventListener('click',function(ev){ev.stopPropagation();openCalEventModal(el.dataset.calEv,null);});});
   }
 }
