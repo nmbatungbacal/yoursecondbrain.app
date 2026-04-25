@@ -2234,18 +2234,29 @@ function compPay(j,jL){
   var half=jL.filter(function(l){return l.status==='halfday';}).length;
   var ot=jL.reduce(function(s,l){return s+(+l.ot_hours||0);},0);
   var late=jL.reduce(function(s,l){return s+(+l.late_minutes||0);},0);
-  var hol=jL.filter(function(l){return l.status==='holiday_worked';});
-  var holPay=hol.reduce(function(s,l){return s+(dr*2*((+l.ot_hours||8)/8));},0);
-  var splHol=jL.filter(function(l){return l.status==='special_holiday_worked';});
-  var splHolPay=splHol.reduce(function(s,l){return s+(dr*1.3*((+l.ot_hours||8)/8));},0);
-  var gross=(pres*dr)+(half*dr*.5)+(ot*otr)+holPay+splHolPay;
+  // Regular holiday WORKED = 200% (double pay)
+  var holWorked=jL.filter(function(l){return l.status==='holiday_worked';});
+  var holWorkedPay=holWorked.reduce(function(s,l){return s+(dr*2);},0);
+  // Regular holiday NOT WORKED = 100% (paid rest day - PH law)
+  var holRest=jL.filter(function(l){return l.status==='holiday';});
+  var holRestPay=holRest.reduce(function(s,l){return s+dr;},0);
+  // Special/non-working holiday WORKED = 130%
+  var splWorked=jL.filter(function(l){return l.status==='special_holiday_worked';});
+  var splWorkedPay=splWorked.reduce(function(s,l){return s+(dr*1.3);},0);
+  // Special/non-working holiday NOT WORKED = 0 (no work no pay - recorded only)
+  var splRest=jL.filter(function(l){return l.status==='special_holiday';});
+  var splRestCount=splRest.length; // recorded but 0 pay
+  var gross=(pres*dr)+(half*dr*.5)+(ot*otr)+holWorkedPay+holRestPay+splWorkedPay;
   var ld=(late/60)*dr;
   var sal=+j.basic_salary||0;if(j.salary_type==='semi-monthly')sal*=2;else if(j.salary_type==='daily')sal=dr*22;
   var sss=j.ded_sss!=null?+j.ded_sss:Math.min(sal*.045,900);
   var ph=j.ded_ph!=null?+j.ded_ph:Math.min(sal*.025,500);
   var pib=j.ded_pi!=null?+j.ded_pi:100;
   var wtax=+j.ded_wtax||0;
-  return{gross:gross,late:ld,sss:sss,ph:ph,pib:pib,wtax:wtax,net:gross-ld-sss-ph-pib-wtax,pres:pres,half:half,abs:jL.filter(function(l){return l.status==='absent';}).length,ot:ot,dr:dr,holPay:holPay,splHolPay:splHolPay};
+  return{gross:gross,late:ld,sss:sss,ph:ph,pib:pib,wtax:wtax,net:gross-ld-sss-ph-pib-wtax,
+    pres:pres,half:half,abs:jL.filter(function(l){return l.status==='absent';}).length,
+    ot:ot,dr:dr,holWorkedPay:holWorkedPay,holRestPay:holRestPay,holWorkedCount:holWorked.length,
+    holRestCount:holRest.length,splWorkedPay:splWorkedPay,splWorkedCount:splWorked.length,splRestCount:splRestCount};
 }
 
 function renderAtt(){
@@ -2345,7 +2356,7 @@ function renderAttTab(ms){
     var h='<div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;margin-bottom:20px">';
     h+='<div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)">&#10010; Log Attendance</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Job *</label><select id="nl-job">'+jobOpts+'</select></div><div class="fi"><label>Date *</label><input id="nl-date" type="date" value="'+todayStr()+'"/></div></div>';
-    h+='<div class="fi" style="margin-bottom:12px"><label>Status</label><select id="nl-status"><option value="present">Present</option><option value="absent">Absent</option><option value="halfday">Half Day</option><option value="leave">Leave</option><option value="holiday">Holiday (Rest Day)</option><option value="holiday_worked">Regular Holiday - Worked (200% pay)</option><option value="special_holiday_worked">Special Holiday - Worked (130% pay)</option><option value="wfh">WFH / Remote</option></select></div>';
+    h+='<div class="fi" style="margin-bottom:12px"><label>Status</label><select id="nl-status"><option value="present">Present</option><option value="absent">Absent</option><option value="halfday">Half Day</option><option value="leave">Leave</option><option value="holiday">Holiday (Rest Day)</option><option value="holiday_worked">Regular Holiday - Worked (200% pay)</option><option value="special_holiday_worked">Special Holiday - Worked (130% pay)</option><option value="special_holiday">Special/Non-Working Holiday - Not Worked (0 pay)</option><option value="wfh">WFH / Remote</option></select></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Time In</label><input id="nl-timein" type="time"/></div><div class="fi"><label>Time Out</label><input id="nl-timeout" type="time"/></div></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>OT Hours</label><input id="nl-ot" type="number" step="0.5" min="0" placeholder="0"/></div><div class="fi"><label>Late (minutes)</label><input id="nl-late" type="number" min="0" placeholder="0"/></div></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Holiday Name</label><input id="nl-holname" type="text" placeholder="e.g. Araw ng Kagitingan, Pasko"/></div><div class="fi"><label>Holiday Type</label><select id="nl-holtype"><option value="">N/A</option><option value="regular">Regular Holiday</option><option value="special">Special Non-Working</option></select></div></div>';
@@ -2365,24 +2376,88 @@ function renderAttTab(ms){
     var gNet=0;
     var h='<div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:16px">Payroll Estimate - '+MONTHS[attM]+' '+attY+'</div>';
     if(!attJobs.length){h+='<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)">Add jobs first.</div></div>';return h;}
-    h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">';
+    
     attJobs.forEach(function(j){
-      var jl=mL.filter(function(l){return l.job_id===j.id;});var p=compPay(j,jl);gNet+=p.net;
-      var attPL=function(l,v,d){return'<div style="display:flex;justify-content:space-between;padding:7px 16px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text-muted)">'+l+'</span><span style="font-weight:600;color:'+(d?'var(--danger)':'var(--navy)')+'">'+v+'</span></div>';};
-      h+='<div class="card"><div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:'+esc(j.color||'var(--navy)')+'"><span style="font-size:13px;font-weight:800;color:#fff">'+esc(j.name||'')+'</span><span style="font-size:10px;color:rgba(255,255,255,.7)">'+esc(j.salary_type||'')+'</span></div>';
-      h+=attPL('Daily Rate',peso(p.dr),false)+attPL('Days Present',p.pres+' days',false)+attPL('Half Days',p.half+' days',false)+attPL('OT Hours',p.ot.toFixed(1)+'h',false);
-      if(p.holPay>0)h+=attPL('Regular Holiday Pay','+'+peso(p.holPay),false);
-      if(p.splHolPay>0)h+=attPL('Special Holiday Pay','+'+peso(p.splHolPay),false);
-      h+='<div style="display:flex;justify-content:space-between;padding:7px 16px;border-bottom:1px solid var(--border);font-size:12px;background:var(--offwhite)"><span style="color:var(--text-muted)">Gross Pay</span><span style="font-weight:800;color:var(--navy)">'+peso(p.gross)+'</span></div>';
-      h+=attPL('Late Deduction','-'+peso(p.late),true)+attPL('SSS'+(j.ded_sss!=null?' (fixed)':' 4.5%'),'-'+peso(p.sss),true)+attPL('PhilHealth'+(j.ded_ph!=null?' (fixed)':' 2.5%'),'-'+peso(p.ph),true)+attPL('Pag-IBIG','-'+peso(p.pib),true)+(p.wtax?attPL('W-Tax','-'+peso(p.wtax),true):'');
-      h+='<div style="padding:12px 16px;background:var(--navy);display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:var(--gold-pale);font-weight:600">Est. Net Pay</span><span style="font-size:20px;font-weight:900;color:var(--gold)">'+peso(p.net)+'</span></div>';
-      h+='<div style="padding:8px 14px;font-size:11px;color:var(--text-muted)">P1: '+esc(attCutoffLbl(j,1))+'<br>P2: '+esc(attCutoffLbl(j,2))+'</div></div>';
+      var attPL=function(l,v,d,note){return'<div style="display:flex;justify-content:space-between;padding:6px 16px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text-muted)">'+l+(note?'<span style="font-size:10px;color:var(--text-muted);margin-left:4px">'+note+'</span>':'')+'</span><span style="font-weight:600;color:'+(d?'var(--danger)':'var(--navy)')+'">'+v+'</span></div>';};
+
+      // Determine cutoff date ranges for this month
+      var yr=attY,mo=attM;
+      var dim=new Date(yr,mo+1,0).getDate();
+      var cuts=[];
+      // Period 1
+      if(j.c1_start&&j.c1_end){
+        var c1s=new Date(yr,mo,j.c1_start);
+        var c1e=new Date(yr,mo,Math.min(j.c1_end,dim));
+        cuts.push({label:'Cutoff 1 (Day '+j.c1_start+'-'+j.c1_end+')',payDay:j.c1_pay,start:c1s,end:c1e});
+      }
+      // Period 2
+      if(j.c2_start&&j.c2_end){
+        var c2s=new Date(yr,mo,j.c2_start);
+        var c2e=new Date(yr,mo,Math.min(j.c2_end,dim));
+        cuts.push({label:'Cutoff 2 (Day '+j.c2_start+'-'+j.c2_end+')',payDay:j.c2_pay,start:c2s,end:c2e});
+      }
+      // If no cutoffs defined, show full month
+      if(!cuts.length){
+        cuts.push({label:'Full Month',payDay:null,start:new Date(yr,mo,1),end:new Date(yr,mo,dim)});
+      }
+
+      h+='<div class="card" style="margin-bottom:20px">';
+      h+='<div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:'+esc(j.color||'var(--navy)')+'"><span style="font-size:14px;font-weight:800;color:#fff">'+esc(j.name||'')+'</span><span style="font-size:11px;color:rgba(255,255,255,.7)">'+esc(j.salary_type||'')+' · '+peso(attDR(j))+'/day</span></div>';
+
+      var jobNet=0;
+      cuts.forEach(function(cut,ci){
+        // Filter logs for this cutoff period
+        var cutLogs=mL.filter(function(l){
+          if(!l.job_id===j.id)return false;
+          if(l.job_id!==j.id)return false;
+          var ld=new Date(l.log_date+'T00:00');
+          return ld>=cut.start&&ld<=cut.end;
+        });
+        var p=compPay(j,cutLogs);
+        jobNet+=p.net;
+        var cutDed=p.sss+p.ph+p.pib+p.wtax;
+
+        h+='<div style="padding:10px 16px;background:var(--offwhite);font-size:12px;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">';
+        h+='<span>'+cut.label+'</span>';
+        if(cut.payDay)h+='<span style="font-size:11px;color:var(--text-muted)">Payout: Day '+cut.payDay+'</span>';
+        h+='</div>';
+
+        h+=attPL('Days Present',p.pres+' days',false,'');
+        if(p.half>0)h+=attPL('Half Days',p.half+' days',false,'');
+        if(p.ot>0)h+=attPL('OT Hours',p.ot.toFixed(1)+'h (125%)',false,'');
+        if(p.holRestCount>0)h+=attPL('Regular Holiday (not worked)',p.holRestCount+' day(s) · '+peso(p.holRestPay),false,'100% pay');
+        if(p.holWorkedCount>0)h+=attPL('Regular Holiday (worked)',p.holWorkedCount+' day(s) · '+peso(p.holWorkedPay),false,'200% pay');
+        if(p.splWorkedCount>0)h+=attPL('Special Holiday (worked)',p.splWorkedCount+' day(s) · '+peso(p.splWorkedPay),false,'130% pay');
+        if(p.splRestCount>0)h+=attPL('Special Holiday (not worked)',p.splRestCount+' day(s) · ₱0',false,'no work no pay');
+
+        h+='<div style="display:flex;justify-content:space-between;padding:7px 16px;border-bottom:1px solid var(--border);font-size:12px;background:#f0f4ff"><span style="font-weight:700;color:var(--navy)">Gross Pay</span><span style="font-weight:800;color:var(--navy)">'+peso(p.gross)+'</span></div>';
+
+        if(p.late>0)h+=attPL('Late Deduction','-'+peso(p.late),true,'');
+        h+=attPL('SSS'+(j.ded_sss!=null?' (fixed)':' 4.5%'),'-'+peso(p.sss),true,'');
+        h+=attPL('PhilHealth'+(j.ded_ph!=null?' (fixed)':' 2.5%'),'-'+peso(p.ph),true,'');
+        h+=attPL('Pag-IBIG','-'+peso(p.pib),true,'');
+        if(p.wtax>0)h+=attPL('Withholding Tax','-'+peso(p.wtax),true,'');
+
+        h+='<div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:'+(ci<cuts.length-1?'2px solid var(--border)':'none')+'">';
+        h+='<span style="font-size:12px;font-weight:700;color:var(--text-muted)">Net Pay - '+cut.label+'</span>';
+        h+='<span style="font-size:16px;font-weight:900;color:var(--success)">'+peso(p.net)+'</span></div>';
+      });
+
+      gNet+=jobNet;
+      h+='<div style="padding:12px 16px;background:var(--navy);display:flex;justify-content:space-between;align-items:center">';
+      h+='<span style="font-size:12px;color:var(--gold-pale);font-weight:700">Total Net - '+MONTHS_S[attM]+' '+attY+'</span>';
+      h+='<span style="font-size:20px;font-weight:900;color:var(--gold)">'+peso(jobNet)+'</span></div>';
+      h+='</div>';
     });
-    h+='</div><div style="background:var(--navy);border-radius:var(--radius);padding:16px 22px;margin-top:16px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13px;font-weight:700;color:var(--gold-pale)">Total Estimated Net</div><div style="font-size:24px;font-weight:900;color:var(--gold)">'+peso(gNet)+'</div></div>';
-    h+='<div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.6">PH Holiday Pay: Regular Holiday worked = 200% daily rate. Special Holiday worked = 130%. Estimates only - verify with actual payslip.</div>';
+
+    h+='<div style="background:var(--navy);border-radius:var(--radius);padding:16px 22px;margin-top:8px;display:flex;justify-content:space-between;align-items:center">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--gold-pale)">Total Estimated Net (All Jobs)</div>';
+    h+='<div style="font-size:24px;font-weight:900;color:var(--gold)">'+peso(gNet)+'</div></div>';
+    h+='<div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7">';
+    h+='🇵🇭 <strong>PH Holiday Pay Rules:</strong> Regular Holiday (not worked) = 100% daily rate. Regular Holiday (worked) = 200%. Special/Non-Working Holiday (worked) = 130%. Special/Non-Working Holiday (not worked) = 0 (no work, no pay). OT = 125% of hourly rate. Verify against your actual payslip.</div>';
     return h;
   }
-  return '';
+return '';
 }
 
 function bindAttEvents(c,ms){
