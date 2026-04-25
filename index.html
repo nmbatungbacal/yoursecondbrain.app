@@ -2331,8 +2331,8 @@ function compPay(j,jL){
   var ph=j.ded_ph!=null?+j.ded_ph:Math.min(sal*.025,500);
   var pib=j.ded_pi!=null?+j.ded_pi:100;
   var wtax=+j.ded_wtax||0;
-  var absDed=absCount*dr;
-  var totalDed=sss+ph+pib+wtax+lateDed+absDed;
+  var absDed=0; // absences already excluded from basic pay (only present days paid)
+  var totalDed=sss+ph+pib+wtax+lateDed;
 
   var netPay=grossWithAllow-totalDed;
 
@@ -2503,7 +2503,8 @@ function renderAttTab(ms){
         h+='<div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden">';
 
         // Header
-        h+='<div style="background:var(--navy);padding:14px 20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">';
+        var jColor=j.color||'var(--navy)';
+        h+='<div style="background:'+esc(jColor)+';padding:14px 20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">';
         h+='<div><div style="font-size:15px;font-weight:800;color:#fff">'+esc(j.name||'')+'</div><div style="font-size:11px;color:var(--gold);margin-top:2px">'+esc(j.role||'')+(j.employment_type?' · '+esc(j.employment_type):'')+'</div></div>';
         h+='<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--gold)">'+cut.label+' ('+cut.days+')</div>';
         if(cut.payDay)h+='<div style="font-size:11px;color:rgba(255,255,255,.6)">Payout: '+MONTHS_S[mo]+' '+cut.payDay+', '+yr+'</div>';
@@ -2517,11 +2518,11 @@ function renderAttTab(ms){
         h+='<div style="padding:10px 14px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--navy)">'+peso(p.dr)+'</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">Daily Rate</div></div>';
         h+='</div>';
 
-        // Two column layout: Earnings | Deductions
-        h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">';
+        // Vertical layout: Earnings then Deductions
+        h+='<div style="display:flex;flex-direction:column">';
 
         // EARNINGS column
-        h+='<div style="border-right:1px solid var(--border)">';
+        h+='<div style="border-bottom:2px solid var(--border)">';
         h+='<div style="padding:8px 14px;background:#e8f5ee;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--success)">Earnings</div>';
 
         var earRow=function(l,v,note){return'<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 14px;border-bottom:1px solid var(--border);font-size:12px"><div><div style="color:var(--text)">'+l+'</div>'+(note?'<div style="font-size:10px;color:var(--text-muted)">'+note+'</div>':'')+'</div><div style="font-weight:600;color:var(--navy);white-space:nowrap">'+v+'</div></div>';};
@@ -2563,14 +2564,14 @@ function renderAttTab(ms){
         h+=dedRow('Pag-IBIG'+(j.ded_pi!=null?' (fixed)':''),'- '+peso(p.pib),j.ded_pi==null?'Mandatory contribution':'');
         if(p.wtax>0)h+=dedRow('Withholding Tax','- '+peso(p.wtax),'');
         if(p.lateMin>0)h+=dedRow('Late / Undertime ('+p.lateMin+'min)','- '+peso(p.lateDed),'Hourly rate x mins late');
-        if(p.absCount>0)h+=dedRow('Absences ('+p.absCount+' day(s))','- '+peso(p.absCount*p.dr),'Daily rate per absent day');
+        if(p.absCount>0)h+='<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 14px;border-bottom:1px solid var(--border);font-size:12px"><div><div style="color:var(--text-muted)">Absences ('+p.absCount+' day(s))</div><div style="font-size:10px;color:var(--text-muted)">Not paid — already excluded from basic pay</div></div><div style="font-weight:600;color:var(--text-muted)">₱0.00</div></div>';
 
         h+='<div style="display:flex;justify-content:space-between;padding:8px 14px;background:#fdeaea;font-size:12px;font-weight:800"><span style="color:var(--danger)">TOTAL DEDUCTIONS</span><span style="color:var(--danger)">- '+peso(p.totalDed)+'</span></div>';
         h+='</div>';
         h+='</div>'; // end two-col
 
         // Net pay footer
-        h+='<div style="padding:14px 20px;background:var(--navy);display:flex;justify-content:space-between;align-items:center">';
+        h+='<div style="padding:14px 20px;background:'+esc(jColor)+';display:flex;justify-content:space-between;align-items:center">';
         h+='<div><div style="font-size:11px;color:var(--gold-pale);font-weight:600">NET PAY - '+cut.label+'</div><div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+cut.days+(cut.payDay?' · Payout: '+MONTHS_S[mo]+' '+cut.payDay:'')+'</div></div>';
         h+='<div style="font-size:24px;font-weight:900;color:var(--gold)">'+peso(p.netPay)+'</div>';
         h+='</div>';
@@ -2580,7 +2581,7 @@ function renderAttTab(ms){
 
       // Job total if multiple cutoffs
       if(cuts.length>1){
-        h+='<div style="background:rgba(201,168,76,.15);border:2px solid var(--gold);border-radius:var(--radius);padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">';
+        h+='<div style="background:'+esc(jColor)+'22;border:2px solid '+esc(jColor)+';border-radius:var(--radius);padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">';
         h+='<div style="font-size:13px;font-weight:700;color:var(--navy)">'+esc(j.name)+' — Total Net ('+MONTHS_S[mo]+' '+yr+')</div>';
         h+='<div style="font-size:20px;font-weight:900;color:var(--navy)">'+peso(jobTotalNet)+'</div>';
         h+='</div>';
