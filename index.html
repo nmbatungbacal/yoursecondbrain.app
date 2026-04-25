@@ -2480,6 +2480,7 @@ function renderAttTab(ms){
     if(!attJobs.length){h+='<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)">Add jobs first.</div></div>';return h;}
 
     attJobs.forEach(function(j){
+      var jColor=j.color||'var(--navy)';
       // Build cutoff periods
       var yr=attY,mo=attM,dim=new Date(yr,mo+1,0).getDate();
       var cuts=[];
@@ -2503,7 +2504,6 @@ function renderAttTab(ms){
         h+='<div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden">';
 
         // Header
-        var jColor=j.color||'var(--navy)';
         h+='<div style="background:'+esc(jColor)+';padding:14px 20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">';
         h+='<div><div style="font-size:15px;font-weight:800;color:#fff">'+esc(j.name||'')+'</div><div style="font-size:11px;color:var(--gold);margin-top:2px">'+esc(j.role||'')+(j.employment_type?' · '+esc(j.employment_type):'')+'</div></div>';
         h+='<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--gold)">'+cut.label+' ('+cut.days+')</div>';
