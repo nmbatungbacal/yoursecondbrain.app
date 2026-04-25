@@ -207,7 +207,7 @@ function db(path,opts){
 }
 
 function saveL(){
-  var s=[['nmb_tasks',tasks],['nmb_habits',habits],['nmb_bl',blItems],['nmb_cycles',cycles],['nmb_wtasks',weekTasks],['nmb_glists',groceryLists],['nmb_gitems',groceryItems],['nmb_meals',fitMeals],['nmb_wlogs',weightLogs],['nmb_ajobs',attJobs],['nmb_alogs',attLogs]];
+  var s=[['nmb_tasks',tasks],['nmb_habits',habits],['nmb_bl',blItems],['nmb_cycles',cycles],['nmb_wtasks',weekTasks],['nmb_glists',groceryLists],['nmb_gitems',groceryItems],['nmb_meals',fitMeals],['nmb_wlogs',weightLogs],['nmb_ajobs',attJobs],['nmb_alogs',attLogs],['nmb_notes',notes],['nmb_slists',shopLists],['nmb_sitems',shopItems]];
   s.forEach(function(x){try{localStorage.setItem(x[0],JSON.stringify(x[1]));}catch(e){}});
   try{localStorage.setItem('nmb_hlogs',JSON.stringify(habitLogs));}catch(e){}
 }
@@ -218,6 +218,9 @@ function loadL(){
   try{fitnessGoals=JSON.parse(localStorage.getItem('nmb_fg')||'{}');}catch(e){}
   try{annualGoals=JSON.parse(localStorage.getItem('nmb_ag')||'null')||annualGoals;}catch(e){}
   try{var cc=JSON.parse(localStorage.getItem('nmb_cals_v2')||'null');if(cc&&cc.length)calCals=cc;}catch(e){}
+  try{var nn=JSON.parse(localStorage.getItem('nmb_notes')||'[]');notes.length=0;nn.forEach(function(n){notes.push(n);});}catch(e){}
+  try{var sl=JSON.parse(localStorage.getItem('nmb_slists')||'[]');shopLists.length=0;sl.forEach(function(n){shopLists.push(n);});}catch(e){}
+  try{var si=JSON.parse(localStorage.getItem('nmb_sitems')||'[]');shopItems.length=0;si.forEach(function(n){shopItems.push(n);});}catch(e){}
   cycIdx=cycles.length?cycles.length-1:0;
 }
 
@@ -243,7 +246,10 @@ function init(){
     db('fin_deadlines?order=due_date.asc').catch(function(){return[];}),
     db('fin_debts').catch(function(){return[];}),
     db('fin_networth').catch(function(){return[];}),
-    db('fin_accounts').catch(function(){return[];})
+    db('fin_accounts').catch(function(){return[];}),
+    db('notes?order=updated_at.desc').catch(function(){return[];}),
+    db('shop_lists?order=created_at.desc').catch(function(){return[];}),
+    db('shop_items?order=created_at.asc').catch(function(){return[];})
   ]).then(function(r){
     tasks=r[0];habits=r[1];
     r[2].forEach(function(l){habitLogs[l.habit_id+'_'+l.logged_date]=l.completed;});
@@ -253,6 +259,9 @@ function init(){
     fitMeals=r[8];weightLogs=r[9];attJobs=r[10];attLogs=r[11];
     finIncome=r[12];finExpenses=r[13];finBudgets=r[14];finSavings=r[15];
     finDeadlines=r[16];finDebts=r[17];finNW=r[18];finAccounts=r[19];
+    if(r[20]&&r[20].length){notes.length=0;r[20].forEach(function(n){notes.push(n);});try{localStorage.setItem('nmb_notes',JSON.stringify(notes));}catch(e){}}
+    if(r[21]&&r[21].length){shopLists.length=0;r[21].forEach(function(n){shopLists.push(n);});}
+    if(r[22]&&r[22].length){shopItems.length=0;r[22].forEach(function(n){shopItems.push(n);});}
     cycIdx=cycles.length?cycles.length-1:0;
     renderAll();
   }).catch(function(){renderAll();});
@@ -1312,10 +1321,13 @@ function estGrocP(name,qty){var k=Object.keys(PH_PRICES).find(function(k){return
 
 function renderGroc(){
   var c=document.getElementById('groc-inner');
-  if(!activeGrocList&&groceryLists.length)activeGrocList=groceryLists[0].id;
-  var html='<div style="display:flex;min-height:500px">';
+  try{var _gl=localStorage.getItem('nmb_glists');if(_gl&&!groceryLists.length)groceryLists=JSON.parse(_gl);}catch(e){}
+  try{var _gi=localStorage.getItem('nmb_gitems');if(_gi&&!groceryItems.length)groceryItems=JSON.parse(_gi);}catch(e){}
+  try{var _agl=localStorage.getItem('nmb_agl');if(_agl)activeGrocList=_agl;}catch(e){}
+  if(!activeGrocList&&groceryLists.length){activeGrocList=groceryLists[0].id;try{localStorage.setItem('nmb_agl',activeGrocList);}catch(e){}}
+  var html='<div style="display:flex;min-height:calc(100vh - 52px)">';
   // Sidebar
-  html+='<div style="width:220px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">';
+  html+='<div style="width:200px;min-width:160px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">';
   html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:800;color:var(--navy)">Lists</span><button class="btn" style="font-size:11px;padding:4px 10px" id="btn-new-list">+ New</button></div>';
   html+='<div style="overflow-y:auto;flex:1" id="g-sb">';
   groceryLists.forEach(function(l){
@@ -1618,6 +1630,7 @@ var notesEditingId=null;
 
 function renderNotes(){
   var c=document.getElementById('notes-inner');
+  try{var _nn=localStorage.getItem('nmb_notes');if(_nn&&!notes.length){var parsed=JSON.parse(_nn);parsed.forEach(function(n){notes.push(n);});}}catch(e){}
   var sorted=notes.slice().sort(function(a,b){return(b.updated_at||b.created_at||'').localeCompare(a.updated_at||a.created_at||'');});
   var current=activeNote?notes.find(function(n){return n.id===activeNote;}):null;
   if(!current&&sorted.length){current=sorted[0];activeNote=sorted[0].id;}
@@ -1660,6 +1673,7 @@ function renderNotes(){
   if(nb)nb.addEventListener('click',function(){
     var nn={id:uid(),title:'New Note',content:'',created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     notes.unshift(nn);activeNote=nn.id;
+    try{localStorage.setItem('nmb_notes',JSON.stringify(notes));}catch(e){}
     db('notes',{method:'POST',body:JSON.stringify(nn)}).catch(function(){try{localStorage.setItem('nmb_notes',JSON.stringify(notes));}catch(e){}});
     renderNotes();setTimeout(function(){var t=document.getElementById('note-title-edit');if(t){t.focus();t.select();}},50);
   });
@@ -1676,6 +1690,7 @@ function renderNotes(){
     var t=document.getElementById('note-title-edit');var ct=document.getElementById('note-content-edit');
     if(!t||!ct)return;
     notes[idx].title=t.value||'Untitled';notes[idx].content=ct.value;notes[idx].updated_at=new Date().toISOString();
+    try{localStorage.setItem('nmb_notes',JSON.stringify(notes));}catch(e){}
     db('notes?id=eq.'+activeNote,{method:'PATCH',body:JSON.stringify({title:notes[idx].title,content:notes[idx].content,updated_at:notes[idx].updated_at})}).catch(function(){});
     // Update sidebar title live
     var sideItem=c.querySelector('[data-note="'+activeNote+'"] div:first-child');
@@ -1696,10 +1711,12 @@ try{var _asl=localStorage.getItem('nmb_asl');if(_asl)activeShopList=_asl;}catch(
 
 function renderShop(){
   var c=document.getElementById('shop-inner');
-  if(!activeShopList&&shopLists.length)activeShopList=shopLists[0].id;
-  var html='<div style="display:flex;min-height:500px">';
+  try{var _sl=localStorage.getItem('nmb_slists');if(_sl&&!shopLists.length)shopLists=JSON.parse(_sl);}catch(e){}
+  try{var _si=localStorage.getItem('nmb_sitems');if(_si&&!shopItems.length)shopItems=JSON.parse(_si);}catch(e){}
+  if(!activeShopList&&shopLists.length){activeShopList=shopLists[0].id;try{localStorage.setItem('nmb_asl',activeShopList);}catch(e){}}
+  var html='<div style="display:flex;min-height:calc(100vh - 52px)">';
   // Sidebar
-  html+='<div style="width:220px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">';
+  html+='<div style="width:200px;min-width:160px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">';
   html+='<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:800;color:var(--navy)">Lists</span><button class="btn" style="font-size:11px;padding:4px 10px" id="btn-new-slist">+ New</button></div>';
   html+='<div style="overflow-y:auto;flex:1">';
   shopLists.forEach(function(l){
@@ -2224,40 +2241,121 @@ function openFinEdit(type,id){
 // -- ATTENDANCE --
 var attSchedJobId=null;
 
-function attDR(j){if(+j.daily_rate)return +j.daily_rate;var s=+j.basic_salary||0;if(j.salary_type==='monthly')return s/22;if(j.salary_type==='semi-monthly')return(s*2)/22;if(j.salary_type==='daily')return s;if(j.salary_type==='hourly')return s*8;return s/22;}
+function attDR(j){
+  if(+j.daily_rate)return +j.daily_rate;
+  var s=+j.basic_salary||0;
+  if(j.salary_type==='monthly')return s/22;
+  if(j.salary_type==='semi-monthly')return(s*2)/22;
+  if(j.salary_type==='daily')return s;
+  if(j.salary_type==='hourly')return s*8;
+  return s/22;
+}
 function attActiveSched(j){var sc=j.schedules||[];if(!sc.length)return{time_in:j.time_in||'',time_out:j.time_out||''};return sc.slice().sort(function(a,b){return b.from.localeCompare(a.from);})[0];}
 function attCutoffLbl(j,p){var s2=p===1?j.c1_start:j.c2_start;var e2=p===1?j.c1_end:j.c2_end;var pay=p===1?j.c1_pay:j.c2_pay;if(!s2&&!e2)return'Not set';var out=[];if(s2&&e2)out.push('Day '+s2+'-'+e2);else if(s2)out.push('Day '+s2);if(pay)out.push('Pay day '+pay);return out.join(' | ');}
 function fmtTime2(t){if(!t)return'--';try{var p=t.split(':');var h=+p[0],m=p[1],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+m+' '+ap;}catch(e){return t;}}
+
 function compPay(j,jL){
-  var dr=attDR(j),otr=dr/8*1.25;
+  var dr=attDR(j);
+  var hr=dr/8;
+
+  // Basic time
   var pres=jL.filter(function(l){return l.status==='present'||l.status==='wfh';}).length;
   var half=jL.filter(function(l){return l.status==='halfday';}).length;
-  var ot=jL.reduce(function(s,l){return s+(+l.ot_hours||0);},0);
-  var late=jL.reduce(function(s,l){return s+(+l.late_minutes||0);},0);
-  // Regular holiday WORKED = 200% (double pay)
+  var basicPay=(pres*dr)+(half*dr*0.5);
+
+  // Overtime (regular day) = hourly rate x 125%
+  var otHrs=jL.filter(function(l){return l.status==='present'||l.status==='wfh'||l.status==='halfday';}).reduce(function(s,l){return s+(+l.ot_hours||0);},0);
+  var otPay=otHrs*(hr*1.25);
+
+  // Rest day worked = 130% of daily rate
+  var restWorked=jL.filter(function(l){return l.status==='rest_day_worked';});
+  var restWorkedPay=restWorked.reduce(function(s,l){return s+(dr*1.3);},0);
+  // Rest day OT = 169% of hourly rate
+  var restOtHrs=restWorked.reduce(function(s,l){return s+(+l.ot_hours||0);},0);
+  var restOtPay=restOtHrs*(hr*1.69);
+
+  // Regular holiday NOT worked = 100% (PH Labor Code Art. 94)
+  var holRest=jL.filter(function(l){return l.status==='holiday';});
+  var holRestPay=holRest.length*dr;
+
+  // Regular holiday WORKED = 200%
   var holWorked=jL.filter(function(l){return l.status==='holiday_worked';});
   var holWorkedPay=holWorked.reduce(function(s,l){return s+(dr*2);},0);
-  // Regular holiday NOT WORKED = 100% (paid rest day - PH law)
-  var holRest=jL.filter(function(l){return l.status==='holiday';});
-  var holRestPay=holRest.reduce(function(s,l){return s+dr;},0);
-  // Special/non-working holiday WORKED = 130%
+  // Regular holiday OT = 260% of hourly rate
+  var holOtHrs=holWorked.reduce(function(s,l){return s+(+l.ot_hours||0);},0);
+  var holOtPay=holOtHrs*(hr*2.6);
+
+  // Regular holiday + rest day worked = 260%
+  var holRestDay=jL.filter(function(l){return l.status==='holiday_rest_worked';});
+  var holRestDayPay=holRestDay.reduce(function(s,l){return s+(dr*2.6);},0);
+
+  // Special holiday NOT worked = 0 (no work no pay)
+  var splRest=jL.filter(function(l){return l.status==='special_holiday';});
+
+  // Special holiday WORKED = 130%
   var splWorked=jL.filter(function(l){return l.status==='special_holiday_worked';});
   var splWorkedPay=splWorked.reduce(function(s,l){return s+(dr*1.3);},0);
-  // Special/non-working holiday NOT WORKED = 0 (no work no pay - recorded only)
-  var splRest=jL.filter(function(l){return l.status==='special_holiday';});
-  var splRestCount=splRest.length; // recorded but 0 pay
-  var gross=(pres*dr)+(half*dr*.5)+(ot*otr)+holWorkedPay+holRestPay+splWorkedPay;
-  var ld=(late/60)*dr;
+  // Special holiday OT = 195% of hourly rate
+  var splOtHrs=splWorked.reduce(function(s,l){return s+(+l.ot_hours||0);},0);
+  var splOtPay=splOtHrs*(hr*1.95);
+
+  // Special holiday + rest day worked = 150%
+  var splRestDay=jL.filter(function(l){return l.status==='special_holiday_rest_worked';});
+  var splRestDayPay=splRestDay.reduce(function(s,l){return s+(dr*1.5);},0);
+
+  // Night differential (10pm-6am) = 10% of hourly rate per ND hour
+  var ndHrs=jL.reduce(function(s,l){return s+(+l.nd_hours||0);},0);
+  var ndPay=ndHrs*(hr*0.1);
+
+  // Allowances (stored on job)
+  var riceAllow=+j.allow_rice||0;      // rice allowance per cutoff
+  var transAllow=+j.allow_trans||0;    // transportation allowance per cutoff
+  var phonAllow=+j.allow_phone||0;     // phone allowance per cutoff
+  var otherAllow=+j.allow_other||0;    // other allowances per cutoff
+  var totalAllow=riceAllow+transAllow+phonAllow+otherAllow;
+
+  // Late/undertime deduction
+  var lateMin=jL.reduce(function(s,l){return s+(+l.late_minutes||0);},0);
+  var lateDed=(lateMin/60)*hr;
+
+  // Absent deduction
+  var absCount=jL.filter(function(l){return l.status==='absent';}).length;
+
+  // Gross pay = basic + all earnings + allowances
+  var grossEarnings=basicPay+otPay+restWorkedPay+restOtPay+holRestPay+holWorkedPay+holOtPay+holRestDayPay+splWorkedPay+splOtPay+splRestDayPay+ndPay;
+  var grossWithAllow=grossEarnings+totalAllow;
+
+  // Mandatory deductions (computed on basic salary, not gross)
   var sal=+j.basic_salary||0;if(j.salary_type==='semi-monthly')sal*=2;else if(j.salary_type==='daily')sal=dr*22;
   var sss=j.ded_sss!=null?+j.ded_sss:Math.min(sal*.045,900);
   var ph=j.ded_ph!=null?+j.ded_ph:Math.min(sal*.025,500);
   var pib=j.ded_pi!=null?+j.ded_pi:100;
   var wtax=+j.ded_wtax||0;
-  return{gross:gross,late:ld,sss:sss,ph:ph,pib:pib,wtax:wtax,net:gross-ld-sss-ph-pib-wtax,
-    pres:pres,half:half,abs:jL.filter(function(l){return l.status==='absent';}).length,
-    ot:ot,dr:dr,holWorkedPay:holWorkedPay,holRestPay:holRestPay,holWorkedCount:holWorked.length,
-    holRestCount:holRest.length,splWorkedPay:splWorkedPay,splWorkedCount:splWorked.length,splRestCount:splRestCount};
+  var absDed=absCount*dr;
+  var totalDed=sss+ph+pib+wtax+lateDed+absDed;
+
+  var netPay=grossWithAllow-totalDed;
+
+  return{
+    dr:dr,basicPay:basicPay,pres:pres,half:half,absCount:absCount,
+    otHrs:otHrs,otPay:otPay,
+    restWorkedCount:restWorked.length,restWorkedPay:restWorkedPay,restOtHrs:restOtHrs,restOtPay:restOtPay,
+    holRestCount:holRest.length,holRestPay:holRestPay,
+    holWorkedCount:holWorked.length,holWorkedPay:holWorkedPay,holOtHrs:holOtHrs,holOtPay:holOtPay,
+    holRestDayCount:holRestDay.length,holRestDayPay:holRestDayPay,
+    splRestCount:splRest.length,
+    splWorkedCount:splWorked.length,splWorkedPay:splWorkedPay,splOtHrs:splOtHrs,splOtPay:splOtPay,
+    splRestDayCount:splRestDay.length,splRestDayPay:splRestDayPay,
+    ndHrs:ndHrs,ndPay:ndPay,
+    riceAllow:riceAllow,transAllow:transAllow,phonAllow:phonAllow,otherAllow:otherAllow,totalAllow:totalAllow,
+    grossEarnings:grossEarnings,grossWithAllow:grossWithAllow,
+    lateDed:lateDed,lateMin:lateMin,sss:sss,ph:ph,pib:pib,wtax:wtax,totalDed:totalDed,
+    netPay:netPay,absDed:absDed||0,
+    // legacy fields for overview
+    gross:grossEarnings,late:lateDed,net:netPay,ot:otHrs,abs:absCount
+  };
 }
+
 
 function renderAtt(){
   var ms=attY+'-'+pad(attM+1);
@@ -2326,6 +2424,9 @@ function renderAttTab(ms){
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Effective From</label><input id="nj-sfrom" type="date"/></div><div class="fi"><label>Time In</label><input id="nj-sin" type="time"/></div><div class="fi"><label>Time Out</label><input id="nj-sout" type="time"/></div></div>';
     h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Gov Deductions Per Cutoff (blank = auto PH rates)</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>SSS</label><input id="nj-sss" type="number" step="0.01" placeholder="Auto 4.5%"/></div><div class="fi"><label>PhilHealth</label><input id="nj-ph" type="number" step="0.01" placeholder="Auto 2.5%"/></div><div class="fi"><label>Pag-IBIG</label><input id="nj-pi" type="number" step="0.01" placeholder="Auto 100"/></div><div class="fi"><label>Withholding Tax</label><input id="nj-wtax" type="number" step="0.01" placeholder="0.00"/></div></div>';
+    h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Allowances Per Cutoff (PHP) — tax-exempt if within limits</div>';
+    h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Rice Subsidy</label><input id="nj-allow-rice" type="number" step="0.01" placeholder="0.00"/></div><div class="fi"><label>Transportation</label><input id="nj-allow-trans" type="number" step="0.01" placeholder="0.00"/></div></div>';
+    h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Phone / Load</label><input id="nj-allow-phone" type="number" step="0.01" placeholder="0.00"/></div><div class="fi"><label>Other Allowance</label><input id="nj-allow-other" type="number" step="0.01" placeholder="0.00"/></div></div>';
     h+='<div class="fi" style="margin-bottom:16px"><label>Notes</label><input id="nj-notes" type="text" placeholder="e.g. Regularization June 2026"/></div>';
     h+='<div style="display:flex;justify-content:flex-end"><button class="btn" id="btn-add-job">Save Job</button></div></div>';
     if(!attJobs.length){h+='<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)">No jobs added yet.</div></div>';return h;}
@@ -2356,11 +2457,11 @@ function renderAttTab(ms){
     var h='<div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;margin-bottom:20px">';
     h+='<div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)">&#10010; Log Attendance</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Job *</label><select id="nl-job">'+jobOpts+'</select></div><div class="fi"><label>Date *</label><input id="nl-date" type="date" value="'+todayStr()+'"/></div></div>';
-    h+='<div class="fi" style="margin-bottom:12px"><label>Status</label><select id="nl-status"><option value="present">Present</option><option value="absent">Absent</option><option value="halfday">Half Day</option><option value="leave">Leave</option><option value="holiday">Holiday (Rest Day)</option><option value="holiday_worked">Regular Holiday - Worked (200% pay)</option><option value="special_holiday_worked">Special Holiday - Worked (130% pay)</option><option value="special_holiday">Special/Non-Working Holiday - Not Worked (0 pay)</option><option value="wfh">WFH / Remote</option></select></div>';
+    h+='<div class="fi" style="margin-bottom:12px"><label>Status</label><select id="nl-status"><option value="present">Present (Regular Day)</option><option value="wfh">WFH / Remote</option><option value="halfday">Half Day</option><option value="absent">Absent</option><option value="leave">On Leave</option><option value="rest_day_worked">Rest Day - Worked (130%)</option><option value="holiday">Regular Holiday - Not Worked (100%)</option><option value="holiday_worked">Regular Holiday - Worked (200%)</option><option value="holiday_rest_worked">Regular Holiday + Rest Day - Worked (260%)</option><option value="special_holiday">Special/Non-Working - Not Worked (0%)</option><option value="special_holiday_worked">Special/Non-Working - Worked (130%)</option><option value="special_holiday_rest_worked">Special/Non-Working + Rest Day - Worked (150%)</option></select></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Time In</label><input id="nl-timein" type="time"/></div><div class="fi"><label>Time Out</label><input id="nl-timeout" type="time"/></div></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>OT Hours</label><input id="nl-ot" type="number" step="0.5" min="0" placeholder="0"/></div><div class="fi"><label>Late (minutes)</label><input id="nl-late" type="number" min="0" placeholder="0"/></div></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Holiday Name</label><input id="nl-holname" type="text" placeholder="e.g. Araw ng Kagitingan, Pasko"/></div><div class="fi"><label>Holiday Type</label><select id="nl-holtype"><option value="">N/A</option><option value="regular">Regular Holiday</option><option value="special">Special Non-Working</option></select></div></div>';
-    h+='<div class="fi" style="margin-bottom:16px"><label>Notes</label><input id="nl-notes" type="text" placeholder="Optional"/></div>';
+    h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Night Diff Hours (10pm-6am)</label><input id="nl-nd" type="number" step="0.5" min="0" placeholder="0"/></div><div class="fi"></div></div><div class="fi" style="margin-bottom:16px"><label>Notes</label><input id="nl-notes" type="text" placeholder="Optional"/></div>';
     h+='<div style="background:var(--offwhite);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text-muted)">&#x1F1F5;&#x1F1ED; <strong>PH Holiday Pay Rules:</strong> Regular Holiday (not worked) = 100% daily rate. Regular Holiday (worked) = 200%. Special Holiday (not worked) = no pay unless with pay policy. Special Holiday (worked) = 130%.</div>';
     h+='<div style="display:flex;justify-content:flex-end"><button class="btn" id="btn-add-log">Save Log</button></div></div>';
     h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:var(--navy)">Logs - '+MONTHS_S[attM]+' '+attY+'</div><select id="att-jf" style="padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;margin-left:auto">'+jobOptsAll+'</select></div>';
@@ -2374,87 +2475,129 @@ function renderAttTab(ms){
   }
   if(attTab==='payroll'){
     var gNet=0;
-    var h='<div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:16px">Payroll Estimate - '+MONTHS[attM]+' '+attY+'</div>';
+    var h='<div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:4px">Payroll Slip - '+MONTHS[attM]+' '+attY+'</div>';
+    h+='<div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Estimates based on logged attendance. Verify against your official payslip.</div>';
     if(!attJobs.length){h+='<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)">Add jobs first.</div></div>';return h;}
-    
+
     attJobs.forEach(function(j){
-      var attPL=function(l,v,d,note){return'<div style="display:flex;justify-content:space-between;padding:6px 16px;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text-muted)">'+l+(note?'<span style="font-size:10px;color:var(--text-muted);margin-left:4px">'+note+'</span>':'')+'</span><span style="font-weight:600;color:'+(d?'var(--danger)':'var(--navy)')+'">'+v+'</span></div>';};
-
-      // Determine cutoff date ranges for this month
-      var yr=attY,mo=attM;
-      var dim=new Date(yr,mo+1,0).getDate();
+      // Build cutoff periods
+      var yr=attY,mo=attM,dim=new Date(yr,mo+1,0).getDate();
       var cuts=[];
-      // Period 1
-      if(j.c1_start&&j.c1_end){
-        var c1s=new Date(yr,mo,j.c1_start);
-        var c1e=new Date(yr,mo,Math.min(j.c1_end,dim));
-        cuts.push({label:'Cutoff 1 (Day '+j.c1_start+'-'+j.c1_end+')',payDay:j.c1_pay,start:c1s,end:c1e});
-      }
-      // Period 2
-      if(j.c2_start&&j.c2_end){
-        var c2s=new Date(yr,mo,j.c2_start);
-        var c2e=new Date(yr,mo,Math.min(j.c2_end,dim));
-        cuts.push({label:'Cutoff 2 (Day '+j.c2_start+'-'+j.c2_end+')',payDay:j.c2_pay,start:c2s,end:c2e});
-      }
-      // If no cutoffs defined, show full month
-      if(!cuts.length){
-        cuts.push({label:'Full Month',payDay:null,start:new Date(yr,mo,1),end:new Date(yr,mo,dim)});
-      }
+      if(j.c1_start&&j.c1_end){var s1=new Date(yr,mo,j.c1_start),e1=new Date(yr,mo,Math.min(j.c1_end,dim));cuts.push({label:'Period 1',days:'Day '+j.c1_start+'-'+j.c1_end,payDay:j.c1_pay,start:s1,end:e1});}
+      if(j.c2_start&&j.c2_end){var s2=new Date(yr,mo,j.c2_start),e2=new Date(yr,mo,Math.min(j.c2_end,dim));cuts.push({label:'Period 2',days:'Day '+j.c2_start+'-'+j.c2_end,payDay:j.c2_pay,start:s2,end:e2});}
+      if(!cuts.length)cuts.push({label:'Full Month',days:'Day 1-'+dim,payDay:null,start:new Date(yr,mo,1),end:new Date(yr,mo,dim)});
 
-      h+='<div class="card" style="margin-bottom:20px">';
-      h+='<div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:'+esc(j.color||'var(--navy)')+'"><span style="font-size:14px;font-weight:800;color:#fff">'+esc(j.name||'')+'</span><span style="font-size:11px;color:rgba(255,255,255,.7)">'+esc(j.salary_type||'')+' · '+peso(attDR(j))+'/day</span></div>';
+      var jobTotalNet=0;
 
-      var jobNet=0;
-      cuts.forEach(function(cut,ci){
-        // Filter logs for this cutoff period
+      cuts.forEach(function(cut){
         var cutLogs=mL.filter(function(l){
-          if(!l.job_id===j.id)return false;
           if(l.job_id!==j.id)return false;
           var ld=new Date(l.log_date+'T00:00');
           return ld>=cut.start&&ld<=cut.end;
         });
         var p=compPay(j,cutLogs);
-        jobNet+=p.net;
-        var cutDed=p.sss+p.ph+p.pib+p.wtax;
+        jobTotalNet+=p.netPay;
+        gNet+=p.netPay;
 
-        h+='<div style="padding:10px 16px;background:var(--offwhite);font-size:12px;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">';
-        h+='<span>'+cut.label+'</span>';
-        if(cut.payDay)h+='<span style="font-size:11px;color:var(--text-muted)">Payout: Day '+cut.payDay+'</span>';
+        // Payslip card
+        h+='<div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden">';
+
+        // Header
+        h+='<div style="background:var(--navy);padding:14px 20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">';
+        h+='<div><div style="font-size:15px;font-weight:800;color:#fff">'+esc(j.name||'')+'</div><div style="font-size:11px;color:var(--gold);margin-top:2px">'+esc(j.role||'')+(j.employment_type?' · '+esc(j.employment_type):'')+'</div></div>';
+        h+='<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--gold)">'+cut.label+' ('+cut.days+')</div>';
+        if(cut.payDay)h+='<div style="font-size:11px;color:rgba(255,255,255,.6)">Payout: '+MONTHS_S[mo]+' '+cut.payDay+', '+yr+'</div>';
+        h+='</div></div>';
+
+        // Summary strip
+        h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);background:var(--offwhite);border-bottom:1px solid var(--border)">';
+        h+='<div style="padding:10px 14px;border-right:1px solid var(--border);text-align:center"><div style="font-size:18px;font-weight:800;color:var(--navy)">'+p.pres+'</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">Days Present</div></div>';
+        h+='<div style="padding:10px 14px;border-right:1px solid var(--border);text-align:center"><div style="font-size:18px;font-weight:800;color:var(--navy)">'+p.absCount+'</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">Days Absent</div></div>';
+        h+='<div style="padding:10px 14px;border-right:1px solid var(--border);text-align:center"><div style="font-size:18px;font-weight:800;color:var(--navy)">'+p.otHrs.toFixed(1)+'h</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">OT Hours</div></div>';
+        h+='<div style="padding:10px 14px;text-align:center"><div style="font-size:15px;font-weight:800;color:var(--navy)">'+peso(p.dr)+'</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">Daily Rate</div></div>';
         h+='</div>';
 
-        h+=attPL('Days Present',p.pres+' days',false,'');
-        if(p.half>0)h+=attPL('Half Days',p.half+' days',false,'');
-        if(p.ot>0)h+=attPL('OT Hours',p.ot.toFixed(1)+'h (125%)',false,'');
-        if(p.holRestCount>0)h+=attPL('Regular Holiday (not worked)',p.holRestCount+' day(s) · '+peso(p.holRestPay),false,'100% pay');
-        if(p.holWorkedCount>0)h+=attPL('Regular Holiday (worked)',p.holWorkedCount+' day(s) · '+peso(p.holWorkedPay),false,'200% pay');
-        if(p.splWorkedCount>0)h+=attPL('Special Holiday (worked)',p.splWorkedCount+' day(s) · '+peso(p.splWorkedPay),false,'130% pay');
-        if(p.splRestCount>0)h+=attPL('Special Holiday (not worked)',p.splRestCount+' day(s) · ₱0',false,'no work no pay');
+        // Two column layout: Earnings | Deductions
+        h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">';
 
-        h+='<div style="display:flex;justify-content:space-between;padding:7px 16px;border-bottom:1px solid var(--border);font-size:12px;background:#f0f4ff"><span style="font-weight:700;color:var(--navy)">Gross Pay</span><span style="font-weight:800;color:var(--navy)">'+peso(p.gross)+'</span></div>';
+        // EARNINGS column
+        h+='<div style="border-right:1px solid var(--border)">';
+        h+='<div style="padding:8px 14px;background:#e8f5ee;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--success)">Earnings</div>';
 
-        if(p.late>0)h+=attPL('Late Deduction','-'+peso(p.late),true,'');
-        h+=attPL('SSS'+(j.ded_sss!=null?' (fixed)':' 4.5%'),'-'+peso(p.sss),true,'');
-        h+=attPL('PhilHealth'+(j.ded_ph!=null?' (fixed)':' 2.5%'),'-'+peso(p.ph),true,'');
-        h+=attPL('Pag-IBIG','-'+peso(p.pib),true,'');
-        if(p.wtax>0)h+=attPL('Withholding Tax','-'+peso(p.wtax),true,'');
+        var earRow=function(l,v,note){return'<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 14px;border-bottom:1px solid var(--border);font-size:12px"><div><div style="color:var(--text)">'+l+'</div>'+(note?'<div style="font-size:10px;color:var(--text-muted)">'+note+'</div>':'')+'</div><div style="font-weight:600;color:var(--navy);white-space:nowrap">'+v+'</div></div>';};
 
-        h+='<div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:'+(ci<cuts.length-1?'2px solid var(--border)':'none')+'">';
-        h+='<span style="font-size:12px;font-weight:700;color:var(--text-muted)">Net Pay - '+cut.label+'</span>';
-        h+='<span style="font-size:16px;font-weight:900;color:var(--success)">'+peso(p.net)+'</span></div>';
-      });
+        h+=earRow('Basic Pay ('+p.pres+(p.half?'+'+p.half+'½':'')+' days)',peso(p.basicPay),'');
+        if(p.otHrs>0)h+=earRow('Overtime ('+p.otHrs.toFixed(1)+'h)',peso(p.otPay),'125% rate');
+        if(p.ndHrs>0)h+=earRow('Night Diff ('+p.ndHrs.toFixed(1)+'h)',peso(p.ndPay),'10% premium');
+        if(p.restWorkedCount>0)h+=earRow('Rest Day Worked ('+p.restWorkedCount+'d)',peso(p.restWorkedPay),'130%');
+        if(p.restOtHrs>0)h+=earRow('Rest Day OT ('+p.restOtHrs.toFixed(1)+'h)',peso(p.restOtPay),'169%');
+        if(p.holRestCount>0)h+=earRow('Regular Holiday (not worked, '+p.holRestCount+'d)',peso(p.holRestPay),'100% - paid leave');
+        if(p.holWorkedCount>0)h+=earRow('Regular Holiday Worked ('+p.holWorkedCount+'d)',peso(p.holWorkedPay),'200%');
+        if(p.holOtHrs>0)h+=earRow('Holiday OT ('+p.holOtHrs.toFixed(1)+'h)',peso(p.holOtPay),'260%');
+        if(p.holRestDayCount>0)h+=earRow('Holiday + Rest Day ('+p.holRestDayCount+'d)',peso(p.holRestDayPay),'260%');
+        if(p.splWorkedCount>0)h+=earRow('Special Holiday Worked ('+p.splWorkedCount+'d)',peso(p.splWorkedPay),'130%');
+        if(p.splOtHrs>0)h+=earRow('Special Holiday OT ('+p.splOtHrs.toFixed(1)+'h)',peso(p.splOtPay),'195%');
+        if(p.splRestDayCount>0)h+=earRow('Special + Rest Day ('+p.splRestDayCount+'d)',peso(p.splRestDayPay),'150%');
+        if(p.splRestCount>0)h+=earRow('Special Holiday (not worked, '+p.splRestCount+'d)','₱0.00','No work, no pay');
 
-      gNet+=jobNet;
-      h+='<div style="padding:12px 16px;background:var(--navy);display:flex;justify-content:space-between;align-items:center">';
-      h+='<span style="font-size:12px;color:var(--gold-pale);font-weight:700">Total Net - '+MONTHS_S[attM]+' '+attY+'</span>';
-      h+='<span style="font-size:20px;font-weight:900;color:var(--gold)">'+peso(jobNet)+'</span></div>';
-      h+='</div>';
-    });
+        // Allowances
+        if(p.totalAllow>0){
+          h+='<div style="padding:6px 14px;background:#f0f4ff;font-size:10px;font-weight:700;text-transform:uppercase;color:#4a6bc4;border-bottom:1px solid var(--border)">Allowances</div>';
+          if(p.riceAllow>0)h+=earRow('Rice Subsidy',peso(p.riceAllow),'');
+          if(p.transAllow>0)h+=earRow('Transportation',peso(p.transAllow),'');
+          if(p.phonAllow>0)h+=earRow('Phone / Load',peso(p.phonAllow),'');
+          if(p.otherAllow>0)h+=earRow('Other Allowance',peso(p.otherAllow),'');
+        }
 
-    h+='<div style="background:var(--navy);border-radius:var(--radius);padding:16px 22px;margin-top:8px;display:flex;justify-content:space-between;align-items:center">';
-    h+='<div style="font-size:13px;font-weight:700;color:var(--gold-pale)">Total Estimated Net (All Jobs)</div>';
-    h+='<div style="font-size:24px;font-weight:900;color:var(--gold)">'+peso(gNet)+'</div></div>';
-    h+='<div style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.7">';
-    h+='🇵🇭 <strong>PH Holiday Pay Rules:</strong> Regular Holiday (not worked) = 100% daily rate. Regular Holiday (worked) = 200%. Special/Non-Working Holiday (worked) = 130%. Special/Non-Working Holiday (not worked) = 0 (no work, no pay). OT = 125% of hourly rate. Verify against your actual payslip.</div>';
+        h+='<div style="display:flex;justify-content:space-between;padding:8px 14px;background:#e8f5ee;font-size:12px;font-weight:800"><span style="color:var(--success)">GROSS PAY</span><span style="color:var(--success)">'+peso(p.grossWithAllow)+'</span></div>';
+        h+='</div>';
+
+        // DEDUCTIONS column
+        h+='<div>';
+        h+='<div style="padding:8px 14px;background:#fdeaea;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--danger)">Deductions</div>';
+
+        var dedRow=function(l,v,note){return'<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 14px;border-bottom:1px solid var(--border);font-size:12px"><div><div style="color:var(--text)">'+l+'</div>'+(note?'<div style="font-size:10px;color:var(--text-muted)">'+note+'</div>':'')+'</div><div style="font-weight:600;color:var(--danger);white-space:nowrap">'+v+'</div></div>';};
+
+        h+=dedRow('SSS'+(j.ded_sss!=null?' (fixed)':''),'- '+peso(p.sss),j.ded_sss==null?'Employee share 4.5%':'');
+        h+=dedRow('PhilHealth'+(j.ded_ph!=null?' (fixed)':''),'- '+peso(p.ph),j.ded_ph==null?'Employee share 2.5%':'');
+        h+=dedRow('Pag-IBIG'+(j.ded_pi!=null?' (fixed)':''),'- '+peso(p.pib),j.ded_pi==null?'Mandatory contribution':'');
+        if(p.wtax>0)h+=dedRow('Withholding Tax','- '+peso(p.wtax),'');
+        if(p.lateMin>0)h+=dedRow('Late / Undertime ('+p.lateMin+'min)','- '+peso(p.lateDed),'Hourly rate x mins late');
+        if(p.absCount>0)h+=dedRow('Absences ('+p.absCount+' day(s))','- '+peso(p.absCount*p.dr),'Daily rate per absent day');
+
+        h+='<div style="display:flex;justify-content:space-between;padding:8px 14px;background:#fdeaea;font-size:12px;font-weight:800"><span style="color:var(--danger)">TOTAL DEDUCTIONS</span><span style="color:var(--danger)">- '+peso(p.totalDed)+'</span></div>';
+        h+='</div>';
+        h+='</div>'; // end two-col
+
+        // Net pay footer
+        h+='<div style="padding:14px 20px;background:var(--navy);display:flex;justify-content:space-between;align-items:center">';
+        h+='<div><div style="font-size:11px;color:var(--gold-pale);font-weight:600">NET PAY - '+cut.label+'</div><div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+cut.days+(cut.payDay?' · Payout: '+MONTHS_S[mo]+' '+cut.payDay:'')+'</div></div>';
+        h+='<div style="font-size:24px;font-weight:900;color:var(--gold)">'+peso(p.netPay)+'</div>';
+        h+='</div>';
+
+        h+='</div>'; // end card
+      }); // end cuts.forEach
+
+      // Job total if multiple cutoffs
+      if(cuts.length>1){
+        h+='<div style="background:rgba(201,168,76,.15);border:2px solid var(--gold);border-radius:var(--radius);padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">';
+        h+='<div style="font-size:13px;font-weight:700;color:var(--navy)">'+esc(j.name)+' — Total Net ('+MONTHS_S[mo]+' '+yr+')</div>';
+        h+='<div style="font-size:20px;font-weight:900;color:var(--navy)">'+peso(jobTotalNet)+'</div>';
+        h+='</div>';
+      }
+    }); // end attJobs.forEach
+
+    // Grand total
+    h+='<div style="background:var(--navy);border-radius:var(--radius);padding:16px 22px;display:flex;justify-content:space-between;align-items:center">';
+    h+='<div><div style="font-size:13px;font-weight:700;color:var(--gold-pale)">TOTAL ESTIMATED NET PAY</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">All jobs · '+MONTHS[attM]+' '+attY+'</div></div>';
+    h+='<div style="font-size:26px;font-weight:900;color:var(--gold)">'+peso(gNet)+'</div></div>';
+
+    h+='<div style="margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.8;background:var(--white);border-radius:var(--radius);padding:12px 16px;border:1px solid var(--border)">';
+    h+='<strong>🇵🇭 PH Labor Code Reference</strong><br>';
+    h+='Regular Day OT: +25% · Rest Day: 130% · Rest Day OT: 169%<br>';
+    h+='Regular Holiday (not worked): 100% · Regular Holiday (worked): 200% · Holiday OT: 260%<br>';
+    h+='Special Holiday (worked): 130% · Special + Rest Day: 150% · Special (not worked): 0%<br>';
+    h+='Night Differential (10pm–6am): +10% · SSS max ₱900 · PhilHealth max ₱500</div>';
     return h;
   }
 return '';
@@ -2466,14 +2609,14 @@ function bindAttEvents(c,ms){
     var name=document.getElementById('nj-name').value.trim();if(!name){alert('Job name required.');return;}
     var sfrom=document.getElementById('nj-sfrom').value,sin=document.getElementById('nj-sin').value,sout=document.getElementById('nj-sout').value;
     var scheds=[];if(sin||sfrom)scheds.push({from:sfrom||todayStr(),time_in:sin,time_out:sout});
-    var nj={id:uid(),created_at:new Date().toISOString(),name:name,role:document.getElementById('nj-role').value.trim(),employment_type:document.getElementById('nj-type').value,color:document.getElementById('nj-color').value,salary_type:document.getElementById('nj-saltype').value,basic_salary:+document.getElementById('nj-salary').value||0,daily_rate:+document.getElementById('nj-daily').value||0,c1_start:+document.getElementById('nj-c1s').value||null,c1_end:+document.getElementById('nj-c1e').value||null,c1_pay:+document.getElementById('nj-c1p').value||null,c2_start:+document.getElementById('nj-c2s').value||null,c2_end:+document.getElementById('nj-c2e').value||null,c2_pay:+document.getElementById('nj-c2p').value||null,schedules:scheds,ded_sss:document.getElementById('nj-sss').value!==''?+document.getElementById('nj-sss').value:null,ded_ph:document.getElementById('nj-ph').value!==''?+document.getElementById('nj-ph').value:null,ded_pi:document.getElementById('nj-pi').value!==''?+document.getElementById('nj-pi').value:null,ded_wtax:+document.getElementById('nj-wtax').value||0,notes:document.getElementById('nj-notes').value.trim()};
+    var nj={id:uid(),created_at:new Date().toISOString(),name:name,role:document.getElementById('nj-role').value.trim(),employment_type:document.getElementById('nj-type').value,color:document.getElementById('nj-color').value,salary_type:document.getElementById('nj-saltype').value,basic_salary:+document.getElementById('nj-salary').value||0,daily_rate:+document.getElementById('nj-daily').value||0,c1_start:+document.getElementById('nj-c1s').value||null,c1_end:+document.getElementById('nj-c1e').value||null,c1_pay:+document.getElementById('nj-c1p').value||null,c2_start:+document.getElementById('nj-c2s').value||null,c2_end:+document.getElementById('nj-c2e').value||null,c2_pay:+document.getElementById('nj-c2p').value||null,schedules:scheds,ded_sss:document.getElementById('nj-sss').value!==''?+document.getElementById('nj-sss').value:null,ded_ph:document.getElementById('nj-ph').value!==''?+document.getElementById('nj-ph').value:null,ded_pi:document.getElementById('nj-pi').value!==''?+document.getElementById('nj-pi').value:null,ded_wtax:+document.getElementById('nj-wtax').value||0,allow_rice:+document.getElementById('nj-allow-rice').value||0,allow_trans:+document.getElementById('nj-allow-trans').value||0,allow_phone:+document.getElementById('nj-allow-phone').value||0,allow_other:+document.getElementById('nj-allow-other').value||0,notes:document.getElementById('nj-notes').value.trim()};
     attJobs.push(nj);db('att_jobs',{method:'POST',body:JSON.stringify(nj)}).catch(function(){saveL();});renderAtt();renderDash();
   });
   var bAddLog=c.querySelector('#btn-add-log');
   if(bAddLog)bAddLog.addEventListener('click',function(){
     var jobId=document.getElementById('nl-job').value,date=document.getElementById('nl-date').value;
     if(!jobId||!date){alert('Job and date required.');return;}
-    var nl={id:uid(),created_at:new Date().toISOString(),job_id:jobId,log_date:date,status:document.getElementById('nl-status').value,time_in:document.getElementById('nl-timein').value||null,time_out:document.getElementById('nl-timeout').value||null,ot_hours:+document.getElementById('nl-ot').value||0,late_minutes:+document.getElementById('nl-late').value||0,holiday_name:document.getElementById('nl-holname').value.trim(),holiday_type:document.getElementById('nl-holtype').value,notes:document.getElementById('nl-notes').value.trim()};
+    var nl={id:uid(),created_at:new Date().toISOString(),job_id:jobId,log_date:date,status:document.getElementById('nl-status').value,time_in:document.getElementById('nl-timein').value||null,time_out:document.getElementById('nl-timeout').value||null,ot_hours:+document.getElementById('nl-ot').value||0,late_minutes:+document.getElementById('nl-late').value||0,nd_hours:+(document.getElementById('nl-nd')?document.getElementById('nl-nd').value:0)||0,holiday_name:document.getElementById('nl-holname').value.trim(),holiday_type:document.getElementById('nl-holtype').value,notes:document.getElementById('nl-notes').value.trim()};
     attLogs.unshift(nl);db('att_logs',{method:'POST',body:JSON.stringify(nl)}).catch(function(){saveL();});renderAtt();renderDash();
   });
   var jf=c.querySelector('#att-jf');if(jf)jf.addEventListener('change',function(){attFJ=this.value;renderAtt();});
