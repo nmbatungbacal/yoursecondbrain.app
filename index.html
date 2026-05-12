@@ -183,14 +183,14 @@ var habY=new Date().getFullYear(),habM=new Date().getMonth();
 var blFilter='all',blSearch='',blSort='manual';
 var habWeek=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*864e5));
 var fitTab='goals',fitMealDate=todayStr();
-var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth();
+var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth(),finCurr='PHP';
 var attTab='overview',attY=new Date().getFullYear(),attM=new Date().getMonth(),attFJ='all';
 var cycIdx=0,activeGrocList=null;
 var editIds={task:null,habit:null,bl:null,cycle:null,task12:null};
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function peso(n){return '\u20B1'+(+n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function peso(n){if(typeof finCurr!=='undefined'&&finCurr==='USD'){return '$'+((+n||0)/57).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}return '\u20B1'+(+n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function pad(n){return n<10?'0'+n:String(n);}
 function fmtDate(s){if(!s)return'';var p=s.split('-');return MONTHS_S[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];}
@@ -1885,7 +1885,7 @@ function bindShopMainEvents(c){
 // -- FINANCE --
 var FIN_TABS=['overview','income','expenses','budgets','savings','deadlines','debts','networth','accounts'];
 var FIN_LABELS=['Overview','Income','Expenses','Budgets','Savings','Deadlines','Debts','Net Worth','Accounts'];
-var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth();
+var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth(),finCurr='PHP';
 var editFinId={inc:null,exp:null,bud:null,sav:null,dl:null,debt:null,nw:null,acc:null};
 
 function daysUntil(ds){if(!ds)return 999;var d=new Date(ds);d.setHours(0,0,0,0);var t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5);}
@@ -1902,12 +1902,12 @@ function renderFin(){
   html+='<div style="margin-left:auto;display:flex;align-items:center;gap:5px;padding-left:12px;flex-shrink:0">';
   html+='<button style="background:none;border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px" id="fin-prev">&#8249;</button>';
   html+='<div style="font-size:12px;font-weight:700;color:var(--navy);min-width:80px;text-align:center">'+MONTHS_S[finM]+' '+finY+'</div>';
-  html+='<button style="background:none;border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px" id="fin-next">&#8250;</button>';
+  html+='<button style="background:none;border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px" id="fin-next">&#8250;</button><div style="display:flex;background:var(--offwhite);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-left:8px"><button style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:'+(finCurr==='PHP'?'var(--navy)':'none')+';color:'+(finCurr==='PHP'?'var(--gold)':'var(--text-muted)')+'" id="fin-php">₱ PHP</button><button style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:'+(finCurr==='USD'?'var(--navy)':'none')+';color:'+(finCurr==='USD'?'var(--gold)':'var(--text-muted)')+'" id="fin-usd">$ USD</button></div>';
   html+='</div></div>';
   html+='<div style="padding:20px 22px" id="fin-body">'+renderFinTab(ms)+'</div>';
   c.innerHTML=html;
   c.querySelectorAll('[data-ft]').forEach(function(b){b.addEventListener('click',function(){finTab=b.dataset.ft;renderFin();});});
-  document.getElementById('fin-prev').addEventListener('click',function(){finM--;if(finM<0){finM=11;finY--;}renderFin();});
+  document.getElementById('fin-prev').addEventListener('click',function(){finM--;if(finM<0){finM=11;finY--;}renderFin();});var finPhpBtn=document.getElementById('fin-php');var finUsdBtn=document.getElementById('fin-usd');if(finPhpBtn)finPhpBtn.addEventListener('click',function(){finCurr='PHP';renderFin();});if(finUsdBtn)finUsdBtn.addEventListener('click',function(){finCurr='USD';renderFin();});
   document.getElementById('fin-next').addEventListener('click',function(){finM++;if(finM>11){finM=0;finY++;}renderFin();});
   bindFinEvents(c,ms);
 }
@@ -2609,7 +2609,8 @@ return '';
 }
 
 function bindAttEvents(c,ms){
-  var bAddJob=c.querySelector('#btn-add-job');
+  var addCutBtn=c.querySelector('#btn-add-cut');if(addCutBtn){addCutBtn.addEventListener('click',function(){var wrap=document.getElementById('nj-cuts-wrap');if(!wrap)return;var count=wrap.querySelectorAll('.cut-row').length;if(count>=4){alert('Maximum 4 cutoff periods.');return;}var newRow=document.createElement('div');newRow.className='cut-row';newRow.dataset.ci=count;newRow.style.cssText='display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 28px;gap:6px;align-items:end;margin-bottom:8px';newRow.innerHTML='<div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Label</label><input class="cl" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px" value="Period '+(count+1)+'"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Start Day</label><input class="cs" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">End Day</label><input class="ce" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Payout Day</label><input class="cp" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px"/></div><button type="button" onclick="this.closest(\'.cut-row\').remove()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0;height:34px;align-self:end">&times;</button>';wrap.appendChild(newRow);});}
+var bAddJob=c.querySelector('#btn-add-job');
   if(bAddJob)bAddJob.addEventListener('click',function(){
     var name=document.getElementById('nj-name').value.trim();if(!name){alert('Job name required.');return;}
     var sfrom=document.getElementById('nj-sfrom').value,sin=document.getElementById('nj-sin').value,sout=document.getElementById('nj-sout').value;var nj_tz=document.getElementById('nj-tz')?document.getElementById('nj-tz').value:'Asia/Manila';var nj_curr=document.getElementById('nj-currency')?document.getElementById('nj-currency').value:'PHP';var nj_cw=document.getElementById('nj-cuts-wrap');var nj_cuts=[];if(nj_cw){nj_cw.querySelectorAll('.cut-row').forEach(function(row){var s=+(row.querySelector('.cs')||{}).value||null,e=+(row.querySelector('.ce')||{}).value||null,p=+(row.querySelector('.cp')||{}).value||null,l=(row.querySelector('.cl')||{}).value||'';if(s||e)nj_cuts.push({label:l,start:s,end:e,pay:p});});}
