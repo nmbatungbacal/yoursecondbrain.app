@@ -9,8 +9,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--offwhite);color:var(--text);min-height:100vh;display:flex;overflow:hidden}
 #sidebar{width:var(--sw);background:var(--navy);height:100vh;display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;transition:transform .3s;overflow-y:auto}
-#sidebar.collapsed{transform:translateX(-100%)}
-#main.sb-hidden{margin-left:0!important}
 .sl{padding:20px 20px 14px;border-bottom:1px solid var(--navy-light)}
 .sl .brand{font-size:18px;font-weight:800;color:var(--gold)}
 .sl .tag{font-size:10px;color:var(--text-muted);margin-top:2px;letter-spacing:.8px;text-transform:uppercase}
@@ -107,7 +105,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--offwhite);colo
 </head>
 <body>
 <nav id="sidebar">
-  <div class="sl" style="display:flex;align-items:center;justify-content:space-between"><div><div class="brand">Second Brain 🧠</div><div class="tag">Your life, organized</div></div><button id="sb-close-btn" style="background:none;border:none;color:#7a8399;font-size:18px;cursor:pointer;padding:2px 6px;border-radius:5px" title="Hide sidebar">✕</button></div>
+  <div class="sl"><div class="brand">Second Brain 🧠</div><div class="tag">Your life, organized</div></div>
   <div class="ns"><div class="nl">Home</div><div class="ni active" data-m="dashboard"><span class="ic">🏠</span>Dashboard</div></div>
   <div class="ns"><div class="nl">Planning</div>
     <div class="ni" data-m="todo"><span class="ic">✅</span>To-Do & Planner</div>
@@ -183,14 +181,14 @@ var habY=new Date().getFullYear(),habM=new Date().getMonth();
 var blFilter='all',blSearch='',blSort='manual';
 var habWeek=Math.ceil((new Date()-new Date(new Date().getFullYear(),0,1))/(7*864e5));
 var fitTab='goals',fitMealDate=todayStr();
-var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth(),finCurr='PHP';
+var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth();
 var attTab='overview',attY=new Date().getFullYear(),attM=new Date().getMonth(),attFJ='all';
 var cycIdx=0,activeGrocList=null;
 var editIds={task:null,habit:null,bl:null,cycle:null,task12:null};
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function peso(n){if(typeof finCurr!=='undefined'&&finCurr==='USD'){return '$'+((+n||0)/57).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}return '\u20B1'+(+n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function peso(n){return '\u20B1'+(+n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function pad(n){return n<10?'0'+n:String(n);}
 function fmtDate(s){if(!s)return'';var p=s.split('-');return MONTHS_S[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];}
@@ -1885,7 +1883,7 @@ function bindShopMainEvents(c){
 // -- FINANCE --
 var FIN_TABS=['overview','income','expenses','budgets','savings','deadlines','debts','networth','accounts'];
 var FIN_LABELS=['Overview','Income','Expenses','Budgets','Savings','Deadlines','Debts','Net Worth','Accounts'];
-var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth(),finCurr='PHP';
+var finTab='overview',finY=new Date().getFullYear(),finM=new Date().getMonth();
 var editFinId={inc:null,exp:null,bud:null,sav:null,dl:null,debt:null,nw:null,acc:null};
 
 function daysUntil(ds){if(!ds)return 999;var d=new Date(ds);d.setHours(0,0,0,0);var t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5);}
@@ -1902,12 +1900,12 @@ function renderFin(){
   html+='<div style="margin-left:auto;display:flex;align-items:center;gap:5px;padding-left:12px;flex-shrink:0">';
   html+='<button style="background:none;border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px" id="fin-prev">&#8249;</button>';
   html+='<div style="font-size:12px;font-weight:700;color:var(--navy);min-width:80px;text-align:center">'+MONTHS_S[finM]+' '+finY+'</div>';
-  html+='<button style="background:none;border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px" id="fin-next">&#8250;</button><div style="display:flex;background:var(--offwhite);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-left:8px"><button style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:'+(finCurr==='PHP'?'var(--navy)':'none')+';color:'+(finCurr==='PHP'?'var(--gold)':'var(--text-muted)')+'" id="fin-php">₱ PHP</button><button style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:'+(finCurr==='USD'?'var(--navy)':'none')+';color:'+(finCurr==='USD'?'var(--gold)':'var(--text-muted)')+'" id="fin-usd">$ USD</button></div>';
+  html+='<button style="background:none;border:1px solid var(--border);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px" id="fin-next">&#8250;</button>';
   html+='</div></div>';
   html+='<div style="padding:20px 22px" id="fin-body">'+renderFinTab(ms)+'</div>';
   c.innerHTML=html;
   c.querySelectorAll('[data-ft]').forEach(function(b){b.addEventListener('click',function(){finTab=b.dataset.ft;renderFin();});});
-  document.getElementById('fin-prev').addEventListener('click',function(){finM--;if(finM<0){finM=11;finY--;}renderFin();});var finPhpBtn=document.getElementById('fin-php');var finUsdBtn=document.getElementById('fin-usd');if(finPhpBtn)finPhpBtn.addEventListener('click',function(){finCurr='PHP';renderFin();});if(finUsdBtn)finUsdBtn.addEventListener('click',function(){finCurr='USD';renderFin();});
+  document.getElementById('fin-prev').addEventListener('click',function(){finM--;if(finM<0){finM=11;finY--;}renderFin();});
   document.getElementById('fin-next').addEventListener('click',function(){finM++;if(finM>11){finM=0;finY++;}renderFin();});
   bindFinEvents(c,ms);
 }
@@ -1947,12 +1945,12 @@ function renderFinTab(ms){
     return h;
   }
 
-  var finCurrency=finCurrency||'PHP';if(finTab==='income'){
+  if(finTab==='income'){
     var h='<div style="background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;margin-bottom:20px">';
     h+='<div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)">&#10010; Add Income</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Source / Description *</label><input id="ni-src" type="text" placeholder="e.g. Atomic UBE Salary, Freelance project"/></div><div class="fi"><label>Amount (PHP) *</label><input id="ni-amt" type="number" step="0.01" placeholder="0.00"/></div></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Date</label><input id="ni-date" type="date" value="'+todayStr()+'"/></div><div class="fi"><label>Category</label><select id="ni-cat"><option value="salary">Salary</option><option value="freelance">Freelance</option><option value="business">Business</option><option value="bonus">Bonus</option><option value="other">Other</option></select></div></div>';
-    h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Recurrence</label><select id="ni-rec"><option value="none">One-time</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div><div class="fi"><label>Notes</label><input id="ni-notes" type="text" placeholder="Optional"/></div></div>';
+    h+='<div class="fi" style="margin-bottom:16px"><label>Notes</label><input id="ni-notes" type="text" placeholder="Optional"/></div>';
     h+='<div style="display:flex;justify-content:flex-end"><button class="btn" id="btn-add-inc">Save Income</button></div></div>';
     h+='<div class="sg" style="margin-bottom:18px">'+fsc('Total Income',peso(totI),'i',MONTHS_S[finM]+' '+finY)+fsc('Entries',inc.length+'','','This month')+'</div>';
     if(!inc.length){h+='<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)">No income recorded for '+MONTHS_S[finM]+' '+finY+'.</div></div>';return h;}
@@ -2117,7 +2115,7 @@ function bindFinEvents(c,ms){
   if(bI)bI.addEventListener('click',function(){
     var src=document.getElementById('ni-src').value.trim();var amt=document.getElementById('ni-amt').value;
     if(!src||!amt){alert('Source and amount are required.');return;}
-    var ni={id:uid(),created_at:new Date().toISOString(),source:src,amount:+amt,date:document.getElementById('ni-date').value||todayStr(),category:document.getElementById('ni-cat').value,recurrence:(document.getElementById('ni-rec')?document.getElementById('ni-rec').value:'none'),notes:document.getElementById('ni-notes').value.trim()};
+    var ni={id:uid(),created_at:new Date().toISOString(),source:src,amount:+amt,date:document.getElementById('ni-date').value||todayStr(),category:document.getElementById('ni-cat').value,notes:document.getElementById('ni-notes').value.trim()};
     finIncome.unshift(ni);db('fin_income',{method:'POST',body:JSON.stringify(ni)}).catch(function(){});renderFin();renderDash();
   });
   var bE=c.querySelector('#btn-add-exp');
@@ -2418,11 +2416,11 @@ function renderAttTab(ms){
     h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Salary</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Salary Type</label><select id="nj-saltype"><option value="monthly">Monthly</option><option value="semi-monthly">Semi-Monthly</option><option value="weekly">Weekly</option><option value="daily">Daily Rate</option><option value="hourly">Hourly</option></select></div><div class="fi"><label>Basic Salary / Rate (PHP)</label><input id="nj-salary" type="number" step="0.01" placeholder="0.00"/></div></div>';
     h+='<div class="fi" style="margin-bottom:12px"><label>Daily Rate Override (blank = auto)</label><input id="nj-daily" type="number" step="0.01" placeholder="e.g. 1818.18"/></div>';
-    Cutoff Periods</div>';h+='<div id="nj-cuts-wrap"><div class="cut-row" data-ci="0" style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 28px;gap:6px;align-items:end;margin-bottom:8px"><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Label</label><input class="cl" data-ci="0" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px" value="Period 1"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Start Day</label><input class="cs" data-ci="0" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="1"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">End Day</label><input class="ce" data-ci="0" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="15"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Payout Day</label><input class="cp" data-ci="0" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="20"/></div><button type="button" onclick="this.closest('.cut-row').remove()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0;height:34px;align-self:end">&times;</button></div></div>';h+='<button type="button" class="btn-g" id="btn-add-cut" style="font-size:11px;padding:5px 12px;margin-bottom:12px">+ Add Cutoff Period</button>';h+='<div style="display:none">
+    h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Cutoff Period 1</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Start Day</label><input id="nj-c1s" type="number" min="1" max="31" placeholder="e.g. 1"/></div><div class="fi"><label>End Day</label><input id="nj-c1e" type="number" min="1" max="31" placeholder="e.g. 15"/></div><div class="fi"><label>Payout Day</label><input id="nj-c1p" type="number" min="1" max="31" placeholder="e.g. 20"/></div></div>';
-    h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Cutoff Period 2 Hidden</div>';
+    h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Cutoff Period 2</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Start Day</label><input id="nj-c2s" type="number" min="1" max="31" placeholder="e.g. 16"/></div><div class="fi"><label>End Day</label><input id="nj-c2e" type="number" min="1" max="31" placeholder="e.g. 30"/></div><div class="fi"><label>Payout Day</label><input id="nj-c2p" type="number" min="1" max="31" placeholder="e.g. 5"/></div></div>';
-    h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Currency & Timezone</div>';h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Currency</label><select id="nj-currency"><option value="PHP">PHP ₱</option><option value="USD">USD $</option><option value="SGD">SGD S$</option><option value="AUD">AUD A$</option><option value="GBP">GBP £</option><option value="EUR">EUR €</option></select></div><div class="fi"><label>Timezone</label><select id="nj-tz"><option value="Asia/Manila">Asia/Manila (PHT)</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York (EST)</option><option value="America/Los_Angeles">America/Los_Angeles (PST)</option><option value="America/Chicago">America/Chicago (CST)</option><option value="Europe/London">Europe/London (GMT)</option><option value="Europe/Paris">Europe/Paris (CET)</option><option value="Australia/Sydney">Australia/Sydney (AEDT)</option><option value="Asia/Singapore">Asia/Singapore (SGT)</option><option value="Asia/Tokyo">Asia/Tokyo (JST)</option><option value="Asia/Dubai">Asia/Dubai (GST)</option></select></div></div>';h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Work Schedule</div>';
+    h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Work Schedule</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Effective From</label><input id="nj-sfrom" type="date"/></div><div class="fi"><label>Time In</label><input id="nj-sin" type="time"/></div><div class="fi"><label>Time Out</label><input id="nj-sout" type="time"/></div></div>';
     h+='<div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:4px">Gov Deductions Per Cutoff (blank = auto PH rates)</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>SSS</label><input id="nj-sss" type="number" step="0.01" placeholder="Auto 4.5%"/></div><div class="fi"><label>PhilHealth</label><input id="nj-ph" type="number" step="0.01" placeholder="Auto 2.5%"/></div><div class="fi"><label>Pag-IBIG</label><input id="nj-pi" type="number" step="0.01" placeholder="Auto 100"/></div><div class="fi"><label>Withholding Tax</label><input id="nj-wtax" type="number" step="0.01" placeholder="0.00"/></div></div>';
@@ -2609,11 +2607,10 @@ return '';
 }
 
 function bindAttEvents(c,ms){
-  var addCutBtn=c.querySelector('#btn-add-cut');if(addCutBtn){addCutBtn.addEventListener('click',function(){var wrap=document.getElementById('nj-cuts-wrap');if(!wrap)return;var count=wrap.querySelectorAll('.cut-row').length;if(count>=4){alert('Maximum 4 cutoff periods.');return;}var newRow=document.createElement('div');newRow.className='cut-row';newRow.dataset.ci=count;newRow.style.cssText='display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 28px;gap:6px;align-items:end;margin-bottom:8px';newRow.innerHTML='<div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Label</label><input class="cl" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px" value="Period '+(count+1)+'"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Start Day</label><input class="cs" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">End Day</label><input class="ce" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px"/></div><div><label style="display:block;font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Payout Day</label><input class="cp" type="number" min="1" max="31" style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px"/></div><button type="button" onclick="this.closest(\'.cut-row\').remove()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0;height:34px;align-self:end">&times;</button>';wrap.appendChild(newRow);});}
-var bAddJob=c.querySelector('#btn-add-job');
+  var bAddJob=c.querySelector('#btn-add-job');
   if(bAddJob)bAddJob.addEventListener('click',function(){
     var name=document.getElementById('nj-name').value.trim();if(!name){alert('Job name required.');return;}
-    var sfrom=document.getElementById('nj-sfrom').value,sin=document.getElementById('nj-sin').value,sout=document.getElementById('nj-sout').value;var nj_tz=document.getElementById('nj-tz')?document.getElementById('nj-tz').value:'Asia/Manila';var nj_curr=document.getElementById('nj-currency')?document.getElementById('nj-currency').value:'PHP';var nj_cw=document.getElementById('nj-cuts-wrap');var nj_cuts=[];if(nj_cw){nj_cw.querySelectorAll('.cut-row').forEach(function(row){var s=+(row.querySelector('.cs')||{}).value||null,e=+(row.querySelector('.ce')||{}).value||null,p=+(row.querySelector('.cp')||{}).value||null,l=(row.querySelector('.cl')||{}).value||'';if(s||e)nj_cuts.push({label:l,start:s,end:e,pay:p});});}
+    var sfrom=document.getElementById('nj-sfrom').value,sin=document.getElementById('nj-sin').value,sout=document.getElementById('nj-sout').value;
     var scheds=[];if(sin||sfrom)scheds.push({from:sfrom||todayStr(),time_in:sin,time_out:sout});
     var nj={id:uid(),created_at:new Date().toISOString(),name:name,role:document.getElementById('nj-role').value.trim(),employment_type:document.getElementById('nj-type').value,color:document.getElementById('nj-color').value,salary_type:document.getElementById('nj-saltype').value,basic_salary:+document.getElementById('nj-salary').value||0,daily_rate:+document.getElementById('nj-daily').value||0,c1_start:+document.getElementById('nj-c1s').value||null,c1_end:+document.getElementById('nj-c1e').value||null,c1_pay:+document.getElementById('nj-c1p').value||null,c2_start:+document.getElementById('nj-c2s').value||null,c2_end:+document.getElementById('nj-c2e').value||null,c2_pay:+document.getElementById('nj-c2p').value||null,schedules:scheds,ded_sss:document.getElementById('nj-sss').value!==''?+document.getElementById('nj-sss').value:null,ded_ph:document.getElementById('nj-ph').value!==''?+document.getElementById('nj-ph').value:null,ded_pi:document.getElementById('nj-pi').value!==''?+document.getElementById('nj-pi').value:null,ded_wtax:+document.getElementById('nj-wtax').value||0,allow_rice:+document.getElementById('nj-allow-rice').value||0,allow_trans:+document.getElementById('nj-allow-trans').value||0,allow_phone:+document.getElementById('nj-allow-phone').value||0,allow_other:+document.getElementById('nj-allow-other').value||0,notes:document.getElementById('nj-notes').value.trim()};
     attJobs.push(nj);db('att_jobs',{method:'POST',body:JSON.stringify(nj)}).catch(function(){saveL();});renderAtt();renderDash();
@@ -2706,12 +2703,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')removeMo();}
 
 // ── SIDEBAR NAV ──
 function closeSB(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mob-ov').classList.remove('show');}
-var sbCollapsed=false;
-try{sbCollapsed=localStorage.getItem('nmb_sb_collapsed')==='1';}catch(e){}
-function applySB(){var sb=document.getElementById('sidebar'),mn=document.getElementById('main');if(sbCollapsed){sb.classList.add('collapsed');mn.classList.add('sb-hidden');}else{sb.classList.remove('collapsed');mn.classList.remove('sb-hidden');}}
-applySB();
-document.getElementById('sb-close-btn').addEventListener('click',function(){sbCollapsed=true;try{localStorage.setItem('nmb_sb_collapsed','1');}catch(e){}applySB();});
-document.getElementById('hbtn').addEventListener('click',function(){if(window.innerWidth>768){sbCollapsed=false;try{localStorage.setItem('nmb_sb_collapsed','0');}catch(e){}applySB();}else{document.getElementById('sidebar').classList.add('open');document.getElementById('mob-ov').classList.add('show');}});
+document.getElementById('hbtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mob-ov').classList.add('show');});
 document.getElementById('mob-ov').addEventListener('click',closeSB);
 document.querySelectorAll('.ni[data-m]').forEach(function(el){el.addEventListener('click',function(){navigate(el.dataset.m);});});
 document.querySelectorAll('.mt[data-m]').forEach(function(el){el.addEventListener('click',function(){navigate(el.dataset.m);});});
