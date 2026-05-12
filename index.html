@@ -9,8 +9,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--offwhite);color:var(--text);min-height:100vh;display:flex;overflow:hidden}
 #sidebar{width:var(--sw);background:var(--navy);height:100vh;display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;transition:transform .3s;overflow-y:auto}
-#sidebar.collapsed{transform:translateX(-100%)}
-#main.sb-hidden{margin-left:0!important}
 .sl{padding:20px 20px 14px;border-bottom:1px solid var(--navy-light)}
 .sl .brand{font-size:18px;font-weight:800;color:var(--gold)}
 .sl .tag{font-size:10px;color:var(--text-muted);margin-top:2px;letter-spacing:.8px;text-transform:uppercase}
@@ -107,7 +105,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--offwhite);colo
 </head>
 <body>
 <nav id="sidebar">
-  <div class="sl" style="display:flex;align-items:center;justify-content:space-between"><div><div class="brand">Second Brain 🧠</div><div class="tag">Your life, organized</div></div><button id="sb-close-btn" style="background:none;border:none;color:#7a8399;font-size:18px;cursor:pointer;padding:2px 6px;border-radius:5px" title="Hide sidebar">✕</button></div>
+  <div class="sl"><div class="brand">Second Brain 🧠</div><div class="tag">Your life, organized</div></div>
   <div class="ns"><div class="nl">Home</div><div class="ni active" data-m="dashboard"><span class="ic">🏠</span>Dashboard</div></div>
   <div class="ns"><div class="nl">Planning</div>
     <div class="ni" data-m="todo"><span class="ic">✅</span>To-Do & Planner</div>
@@ -1952,7 +1950,7 @@ function renderFinTab(ms){
     h+='<div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)">&#10010; Add Income</div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Source / Description *</label><input id="ni-src" type="text" placeholder="e.g. Atomic UBE Salary, Freelance project"/></div><div class="fi"><label>Amount (PHP) *</label><input id="ni-amt" type="number" step="0.01" placeholder="0.00"/></div></div>';
     h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Date</label><input id="ni-date" type="date" value="'+todayStr()+'"/></div><div class="fi"><label>Category</label><select id="ni-cat"><option value="salary">Salary</option><option value="freelance">Freelance</option><option value="business">Business</option><option value="bonus">Bonus</option><option value="other">Other</option></select></div></div>';
-    h+='<div class="fr" style="margin-bottom:12px"><div class="fi"><label>Recurrence</label><select id="ni-rec"><option value="none">One-time</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div><div class="fi"><label>Notes</label><input id="ni-notes" type="text" placeholder="Optional"/></div></div>';
+    h+='<div class="fi" style="margin-bottom:16px"><label>Notes</label><input id="ni-notes" type="text" placeholder="Optional"/></div>';
     h+='<div style="display:flex;justify-content:flex-end"><button class="btn" id="btn-add-inc">Save Income</button></div></div>';
     h+='<div class="sg" style="margin-bottom:18px">'+fsc('Total Income',peso(totI),'i',MONTHS_S[finM]+' '+finY)+fsc('Entries',inc.length+'','','This month')+'</div>';
     if(!inc.length){h+='<div class="card"><div style="text-align:center;padding:32px;color:var(--text-muted)">No income recorded for '+MONTHS_S[finM]+' '+finY+'.</div></div>';return h;}
@@ -2117,7 +2115,7 @@ function bindFinEvents(c,ms){
   if(bI)bI.addEventListener('click',function(){
     var src=document.getElementById('ni-src').value.trim();var amt=document.getElementById('ni-amt').value;
     if(!src||!amt){alert('Source and amount are required.');return;}
-   var ni={id:uid(),created_at:new Date().toISOString(),source:src,amount:+amt,date:document.getElementById('ni-date').value||todayStr(),category:document.getElementById('ni-cat').value,recurrence:(document.getElementById('ni-rec')?document.getElementById('ni-rec').value:'none'),notes:document.getElementById('ni-notes').value.trim()};
+    var ni={id:uid(),created_at:new Date().toISOString(),source:src,amount:+amt,date:document.getElementById('ni-date').value||todayStr(),category:document.getElementById('ni-cat').value,notes:document.getElementById('ni-notes').value.trim()};
     finIncome.unshift(ni);db('fin_income',{method:'POST',body:JSON.stringify(ni)}).catch(function(){});renderFin();renderDash();
   });
   var bE=c.querySelector('#btn-add-exp');
@@ -2705,15 +2703,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')removeMo();}
 
 // ── SIDEBAR NAV ──
 function closeSB(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mob-ov').classList.remove('show');}
-var sbCollapsed=false;
-try{sbCollapsed=localStorage.getItem('nmb_sb_collapsed')==='1';}catch(e){}
-function applySB(){var sb=document.getElementById('sidebar'),mn=document.getElementById('main');if(sbCollapsed){sb.classList.add('collapsed');mn.classList.add('sb-hidden');}else{sb.classList.remove('collapsed');mn.classList.remove('sb-hidden');}}
-applySB();
-document.getElementById('sb-close-btn').addEventListener('click',function(){sbCollapsed=true;try{localStorage.setItem('nmb_sb_collapsed','1');}catch(e){}applySB();});
-document.getElementById('hbtn').addEventListener('click',function(){
-  if(window.innerWidth>768){sbCollapsed=false;try{localStorage.setItem('nmb_sb_collapsed','0');}catch(e){}applySB();}
-  else{document.getElementById('sidebar').classList.add('open');document.getElementById('mob-ov').classList.add('show');}
-});
+document.getElementById('hbtn').addEventListener('click',function(){document.getElementById('sidebar').classList.add('open');document.getElementById('mob-ov').classList.add('show');});
 document.getElementById('mob-ov').addEventListener('click',closeSB);
 document.querySelectorAll('.ni[data-m]').forEach(function(el){el.addEventListener('click',function(){navigate(el.dataset.m);});});
 document.querySelectorAll('.mt[data-m]').forEach(function(el){el.addEventListener('click',function(){navigate(el.dataset.m);});});
